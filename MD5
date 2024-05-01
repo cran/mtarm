@@ -1,0 +1,13 @@
+d6b89b012295a8d1d1826c89f7250941 *DESCRIPTION
+17058f1719e08e330e17f6d479e7f66d *NAMESPACE
+580e39166864c26d2622d73dbca8c621 *R/mtar.R
+3f1fc219fe98622abafec10ea207951d *data/returns.rda
+f6e701142ce8fc340471afafa70476f7 *data/riverflows.rda
+31131efac787ee9f983a22292cb8ee31 *man/DIC.Rd
+68e41112721deb3e793fce4d85208f31 *man/WAIC.Rd
+90f3283a90d230e76966f96dcfc3935d *man/convert.Rd
+ab548100b85290a1181aa80dc4ded596 *man/forecasting.Rd
+d2a5b4c15c7dbca2cc457715ffed3b9c *man/mtar.Rd
+802384dbbb92abcbd15bd0acd08baa37 *man/returns.Rd
+37326389a0b7fcc8d4526925a9dbd36e *man/riverflows.Rd
+dff2b4e99c5ec17409cff97f652cb077 *man/simtar.Rd
