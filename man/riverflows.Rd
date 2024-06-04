@@ -8,8 +8,8 @@
 A data frame with 1200 rows and 4 variables:
 \describe{
   \item{Date}{a vector indicating the dates of the measurements.}
-  \item{ElTrebol}{a numeric vector indicating the first river flow.}
-  \item{VillaLosada}{a numeric vector indicating the second river flow.}
+  \item{Bedon}{a numeric vector indicating the Bedon river flow.}
+  \item{LaPlata}{a numeric vector indicating the La Plata river flow.}
   \item{Rainfall}{a numeric vector indicating the rainfall.}
 }
 }

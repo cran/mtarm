@@ -17,13 +17,12 @@ A data frame with 1505 rows and 4 variables:
 data(returns)
 }
 \description{
-These data correspond to the returns of the closing prices of the
-Colcap, Bovespa, and S&P 500 indexes from February 2010 to March 2016. Colcap is
-a leading indicator of the price dynamics of the 20 most liquid shares on the
-Colombian Stock Market. As the newest stock exchange in Latin America, the
-Brazilian Stock Exchange has been in existence since 2008 when the stock exchange
-of Sao Paulo joined the Stock Exchange and Futures. This is the largest market
-in Latin America and one of the largest in the world. Finally, the Standard & Poor's
+These data correspond to the returns of closing prices of the
+Colcap, Bovespa, and S&P 500 indexes from 2010-02-01 to 2016-03-31 (1505 time
+points). Colcap is a leading indicator of the price dynamics of the 20 most
+liquid shares on the Colombian Stock Market. Bovespa is the Brazilian stock
+market index, the world's thirteenth largest and most important stock exchange,
+and the first in Latin America. Finally, the Standard & Poor's 500 (S&P 500)
 index is a stock index based on the 500 largest companies in the United States.
 }
 \examples{

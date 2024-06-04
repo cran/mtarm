@@ -9,13 +9,12 @@
 #'
 #' @title Returns of the closing prices of three financial indexes
 #'
-#' @description These data correspond to the returns of the closing prices of the
-#' Colcap, Bovespa, and S&P 500 indexes from February 2010 to March 2016. Colcap is
-#' a leading indicator of the price dynamics of the 20 most liquid shares on the
-#' Colombian Stock Market. As the newest stock exchange in Latin America, the
-#' Brazilian Stock Exchange has been in existence since 2008 when the stock exchange
-#' of Sao Paulo joined the Stock Exchange and Futures. This is the largest market
-#' in Latin America and one of the largest in the world. Finally, the Standard & Poor's
+#' @description These data correspond to the returns of closing prices of the
+#' Colcap, Bovespa, and S&P 500 indexes from 2010-02-01 to 2016-03-31 (1505 time
+#' points). Colcap is a leading indicator of the price dynamics of the 20 most
+#' liquid shares on the Colombian Stock Market. Bovespa is the Brazilian stock
+#' market index, the world's thirteenth largest and most important stock exchange,
+#' and the first in Latin America. Finally, the Standard & Poor's 500 (S&P 500)
 #' index is a stock index based on the 500 largest companies in the United States.
 #'
 #' @docType data
@@ -59,8 +58,8 @@
 #' @format A data frame with 1200 rows and 4 variables:
 #' \describe{
 #'   \item{Date}{a vector indicating the dates of the measurements.}
-#'   \item{ElTrebol}{a numeric vector indicating the first river flow.}
-#'   \item{VillaLosada}{a numeric vector indicating the second river flow.}
+#'   \item{Bedon}{a numeric vector indicating the Bedon river flow.}
+#'   \item{LaPlata}{a numeric vector indicating the La Plata river flow.}
 #'   \item{Rainfall}{a numeric vector indicating the rainfall.}
 #' }
 #' @keywords datasets
@@ -98,7 +97,7 @@
 #'
 #' ###### Example 2: Rainfall and two river flows in Colombia
 #' data(riverflows)
-#' fit2a <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Gaussian",
+#' fit2a <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Gaussian",
 #'               data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 #' fit2b <- update(fit2a,dist="Slash")
 #' fit2c <- update(fit2a,dist="Student-t")
@@ -106,7 +105,7 @@
 #' }
 #'
 DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
-  mtlogLik <- function(dist,y,X,beta,Sigma,nu){
+  mtlogLik <- function(dist,y,X,beta,Sigma,log,nu){
     resu <- y-X%*%beta
     out <- apply(t(resu)*tcrossprod(chol2inv(chol(Sigma)),resu),2,sum)
     if(dist=="Laplace")
@@ -120,6 +119,7 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
     if(dist=="Hyperbolic")
       out <- -2*log(besselK(nu*sqrt(1+out),(2-k)/2)) -((2-k)/2)*log(1+out) - k*log(nu) +2*log(besselK(nu,1))
     out <- sum(out + k*log(2*pi) + log(det(Sigma)))
+    if(log) out <- out + 2*sum(y)
     return(out)
   }
   another <- list(...)
@@ -147,9 +147,9 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
         Sigmai <- matrix(another[[l]]$chains[[i]]$scale[,((j-1)*k + 1):(j*k)],k,k)
         places <- regs==i
         if(another[[l]]$dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
-          Dbar <- Dbar + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$chains$extra[,j])
+          Dbar <- Dbar + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$log,another[[l]]$chains$extra[,j])
         else
-          Dbar <- Dbar + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai)
+          Dbar <- Dbar + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$log)
       }
       Dbarv <- c(Dbarv,Dbar)
     }
@@ -171,9 +171,9 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
       }else regs <- matrix(1,nrow(another[[l]]$data[[i]]$y),1)
       places <- regs==i
       if(another[[l]]$dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
-        Dhat <- Dhat + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],location,scale,extra)
+        Dhat <- Dhat + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],location,scale,another[[l]]$log,extra)
       else
-        Dhat <- Dhat + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],location,scale)
+        Dhat <- Dhat + mtlogLik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],location,scale,another[[l]]$log)
     }
     out[l] <- Dhat + 2*(mean(Dbarv) - Dhat)
     outnames[l] <- as.character(call.[l+1])
@@ -207,7 +207,7 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
 #'
 #' ###### Example 2: Rainfall and two river flows in Colombia
 #' data(riverflows)
-#' fit2a <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Gaussian",
+#' fit2a <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Gaussian",
 #'               data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 #' fit2b <- update(fit2a,dist="Slash")
 #' fit2c <- update(fit2a,dist="Student-t")
@@ -215,7 +215,7 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
 #' }
 #'
 WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
-  Lik <- function(dist,y,X,beta,Sigma,nu){
+  Lik <- function(dist,y,X,beta,Sigma,log,nu){
     resu <- y-X%*%beta
     out <- apply(t(resu)*tcrossprod(chol2inv(chol(Sigma)),resu),2,sum)
     if(dist=="Gaussian") out <- exp(-out/2)
@@ -230,6 +230,7 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
     if(dist=="Hyperbolic")
       out <- besselK(nu*sqrt(1+out),(2-k)/2)*(1+out)^((2-k)/4)*nu^(k/2)/besselK(nu,1)
     out <- out/((2*pi)^(k/2)*det(Sigma)^(1/2))
+    if(log) out <- out*apply(y,1,function(x) prod(exp(-x)))
     return(out)
   }
   another <- list(...)
@@ -256,9 +257,9 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
         }else regs <- matrix(1,nrow(another[[l]]$data[[i]]$y),1)
         places <- regs==i
         if(another[[l]]$dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
-          tempi <- Lik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$chains$extra[,j])
+          tempi <- Lik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$log,another[[l]]$chains$extra[,j])
         else
-          tempi <- Lik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai)
+          tempi <- Lik(dist,another[[l]]$data[[i]]$y[places,],another[[l]]$data[[i]]$X[places,],betai,Sigmai,another[[l]]$log)
         Dbar[places] <- Dbar[places] + tempi/n.sim
         Dbarlog[places] <- Dbarlog[places] + log(tempi)/n.sim
       }
@@ -315,6 +316,8 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
 #' @param prior an (optional) list that allows the user to specify the values of the
 #'              hyperparameters, that is, allows to specify the values of the parameters
 #'              of the prior distributions.
+#' @param log an (optional) logical variable. If \code{TRUE}, then the behaviour of the output
+#'            series is described using the exponentiated version of \code{dist}.
 #' @param ... further arguments passed to or from other methods.
 #'
 #' @return an object of class \emph{mtar} in which the main results of the model fitted to the data are stored, i.e., a
@@ -367,15 +370,16 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
 #'
 #' ###### Example 2: Rainfall and two river flows in Colombia
 #' data(riverflows)
-#' fit2 <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Laplace",
+#' fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
 #'              data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 #' summary(fit2)
 #' }
 #'
-mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Gaussian", prior=list(), n.sim=500, n.burnin=100, n.thin=1, ...){
+mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Gaussian", prior=list(), n.sim=500, n.burnin=100, n.thin=1, log=FALSE, ...){
   if(!(tolower(dist) %in% c("gaussian","student-t","hyperbolic","laplace","slash","contaminated normal")))
     stop("Only 'Gaussian', 'Student-t', 'Hyperbolic', 'Laplace', 'Slash' and 'Contaminated normal' distributions are supported!",call.=FALSE)
   if(missing(data)) data <- environment(formula)
+  ars$p <- ceiling(abs(ars$p))
   regim <- length(ars$p)
   mmf <- match.call(expand.dots = FALSE)
   m <- match(c("formula", "data", "subset", "na.action", "row.names"), names(mmf), 0)
@@ -393,6 +397,10 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
     D <- matrix(D[,-1],ncol=length(Dnames)-1)
     colnames(D) <- Dnames[-1]
   }
+  if(log){
+    if(any(D<0)) stop(paste0("There are non-positive values in the output series, so it cannot be described using the log-",tolower(dist)," distribution."),call.=FALSE)
+    D <- log(D)
+  }
   k <- ncol(D)
   if(regim > 1){
     mz <- model.part(Formula(formula), data = mmf, rhs = 2, terms = TRUE)
@@ -404,6 +412,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
     }
   }
   if(!is.null(ars$q)){
+    ars$q <- ceiling(abs(ars$q))
     if(min(ars$q) > 0 ){
       mx2 <- model.part(Formula(formula), data = mmf, rhs = 3, terms = TRUE)
       X2 <- model.matrix(mx2, data = mmf)
@@ -415,15 +424,21 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       r <- ncol(X2)
     }
   }else ars$q <- rep(0,regim)
-  if(is.null(ars$d)) ars$d <- rep(0,regim)
-  if(is.null(prior$mu0)) prior$mu0 <- 0
-  if(is.null(prior$SigmaC)) prior$SigmaC <- 1000000000
-  if(is.null(prior$Omega0)) prior$Omega0 <- matrix(1/prior$SigmaC,k,k)
+  if(is.null(ars$d)) ars$d <- rep(0,regim) else ars$d <- ceiling(abs(ars$d))
+  if(is.null(prior$theta0)) prior$theta0 <- 0
+  if(is.null(prior$delta0)) prior$delta0 <- 1000000000
+  if(is.null(prior$omega0)) prior$omega0 <- 1/1000000000
+  Omega0 <- diag(k)*prior$omega0
   if(is.null(prior$tau0)) prior$tau0 <- k
-  if(is.null(prior$hmin)) prior$hmin <- 0
-  if(is.null(prior$hmax)) prior$hmax <- 3
+  if(is.null(prior$hmin)) prior$hmin <- 0 else prior$hmin <- ceiling(abs(prior$hmin))
+  if(is.null(prior$hmax)) prior$hmax <- 3 else prior$hmax <- ceiling(abs(prior$hmax))
+  prior$hmin <- min(prior$hmin,prior$hmax)
+  prior$hmax <- max(prior$hmin,prior$hmax)
   data <- list()
   chains <- list()
+  n.sim <- ceiling(abs(n.sim))
+  n.thin <- ceiling(abs(n.thin))
+  n.burnin <- ceiling(abs(n.burnin))
   rep <- n.sim*n.thin + n.burnin
   ids <- matrix(seq(1,n.sim*n.thin*k,k))
   ids <- ids[seq(1,n.sim*n.thin,n.thin)]
@@ -482,17 +497,17 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   if(dist=="Hyperbolic"){
     if(is.null(prior$gamma0)) prior$gamma0 <- 0.1
     if(is.null(prior$eta0)) prior$eta0 <- 4
-    chains$extra <- matrix(1.85,1,1)
-    nus <- matrix(seq(prior$gamma0,prior$eta0,length=501),501,1)
+    chains$extra <- matrix(mean(prior$gamma0,prior$eta0),1,1)
+    nus <- matrix(seq(prior$gamma0,prior$eta0,length=1001),1001,1)
     num1 <- nus[2:length(nus)] - nus[1:(length(nus)-1)]
     num2 <- (nus[2:length(nus)] + nus[1:(length(nus)-1)])/2
     resto <- log(nus) - log(besselK(nus,nu=1))
   }
   if(dist=="Student-t"){
     if(is.null(prior$gamma0)) prior$gamma0 <- 1
-    if(is.null(prior$eta0)) prior$eta0 <- 80
-    chains$extra <- matrix(100,1,1)
-    nus <- matrix(seq(prior$gamma0,prior$eta0,length=501),501,1)
+    if(is.null(prior$eta0)) prior$eta0 <- 100
+    chains$extra <- matrix(mean(prior$gamma0,prior$eta0),1,1)
+    nus <- matrix(seq(prior$gamma0,prior$eta0,length=1001),1001,1)
     num1 <- nus[2:length(nus)] - nus[1:(length(nus)-1)]
     num2 <- (nus[2:length(nus)] + nus[1:(length(nus)-1)])/2
     resto <- (nus/2)*log(nus/2) - lgamma(nus/2)
@@ -521,8 +536,8 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       X <- matrix(data[[i]]$X[places,],sum(places),ncol(data[[i]]$X))
       n <- nrow(X); s <- ncol(X)
       y <- matrix(data[[i]]$y[places,],n,ncol(data[[i]]$y))
-      mu0s <- matrix(prior$mu0,s,k)
-      Sigmarinv <- matrix(1/prior$SigmaC,s,s)
+      mu0s <- matrix(prior$theta0,s,k)
+      Sigmarinv <- diag(s)/prior$delta0
       if(dist=="Gaussian") us[places] <- rep(1,n)
       else{
         resu <- y-X%*%chains[[i]]$location[,(1+(j-1)*k):(j*k)]
@@ -552,7 +567,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       M <- crossprod(A,(crossprod(Xu,yu) + crossprod(Sigmarinv,mu0s)))
       betanew <- M + crossprod(chol(A),matrix(rnorm(s*k),s,k))%*%chol(chains[[i]]$scale[,(1+(j-1)*k):(j*k)])
       chains[[i]]$location <- cbind(chains[[i]]$location,betanew)
-      Omega <- prior$Omega0 + crossprod(betanew-mu0s,Sigmarinv)%*%(betanew-mu0s) + crossprod(yu-Xu%*%betanew)
+      Omega <- Omega0 + crossprod(betanew-mu0s,Sigmarinv)%*%(betanew-mu0s) + crossprod(yu-Xu%*%betanew)
       Omegachol <- chol(chol2inv(chol(Omega)))
       Sigmanew2[[i]] <- tcrossprod(crossprod(Omegachol,matrix(rnorm(k*(prior$tau0+s+n)),k,prior$tau0+s+n)))
       Sigmanew <- chol2inv(chol(Sigmanew2[[i]]))
@@ -638,7 +653,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   }
   if(dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
     chains$extra <- matrix(chains$extra[,n.burnin + seq(1,n.sim*n.thin,n.thin)],ncol=n.sim)
-  out_ <- list(data=data,chains=chains,n.sim=n.sim,regim=regim,name=name,dist=dist,ps=ps,ars=ars,formula=Formula(formula),Intercept=Intercept,call=match.call())
+  out_ <- list(data=data,chains=chains,n.sim=n.sim,regim=regim,name=name,dist=dist,ps=ps,ars=ars,formula=Formula(formula),Intercept=Intercept,call=match.call(),log=log)
   if(regim > 1){
     out_$chains$thresholds <- matrix(thresholds.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)],ncol=n.sim)
     out_$chains$h <- hs.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)]
@@ -658,22 +673,21 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
   out_ <- list()
   resumen <- function(x){
     x <- matrix(x,ifelse(is.null(nrow(x)),1,nrow(x)),ifelse(is.null(ncol(x)),length(x),ncol(x)))
-    y <- matrix(0,nrow(x),5)
+    y <- matrix(0,nrow(x),4)
     y[,1] <- apply(x,1,mean)
-    y[,2] <- apply(x,1,sd)
-    y[,3] <- apply(x,1,function(x) min(mean(sign(median(x))*x > 0),1-1/200000))
-    y[,3] <- 2*(1 - y[,3])
+    y[,2] <- apply(x,1,function(x) min(mean(sign(median(x))*x > 0),1-1/200000))
+    y[,2] <- 2*(1 - y[,2])
     ks <- seq(credible,1,length=n.sim*(1-credible))
     lis <- t(apply(x,1,quantile,probs=ks-credible))
     lss <- t(apply(x,1,quantile,probs=ks))
     dif <- apply(abs(lss-lis),1,which.min)
-    y[,4] <- lis[cbind(1:nrow(x),dif)]
-    y[,5] <- lss[cbind(1:nrow(x),dif)]
-    colnames(y) <- c("   Mean"," Std.Dev"," 2(1-PD) ","HDI_Low","HDI_high")
+    y[,3] <- lis[cbind(1:nrow(x),dif)]
+    y[,4] <- lss[cbind(1:nrow(x),dif)]
+    colnames(y) <- c("   Mean"," 2(1-PD) ","HDI_Low","HDI_high")
     return(y)
   }
   if(object$regim > 1){
-    thresholds <- matrix(round(resumen(matrix(object$chains$thresholds,nrow=object$regim-1)),digits=digits)[,c(1,4,5)],ncol=3)
+    thresholds <- matrix(round(resumen(matrix(object$chains$thresholds,nrow=object$regim-1)),digits=digits)[,c(1,3,4)],ncol=3)
     h <- as.integer(round(mean(object$chains$h)))
     thresholds1 <- paste0(c("(-Inf",paste0("(",round(thresholds[,1],digits=digits))),",",c(paste0(round(thresholds[,1],digits=digits),"]"),"Inf)"))
     thresholds2 <- paste0(c("(-Inf",paste0("(",round(thresholds[,2],digits=digits))),",",c(paste0(round(thresholds[,2],digits=digits),"]"),"Inf)"))
@@ -700,11 +714,11 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
       temps <- matrix(matrix(object$chains[[i]]$scale,k,n.sim*k)[,seq(j,n.sim*k,k)],nrow=k)
       if(j > 1){
         out <- cbind(out,matrix(0,nrow(out),1),round(resumen(temp),digits=digits))
-        outs <- cbind(outs,round(resumen(temps)[,c(1,4,5)],digits=digits+1))
+        outs <- cbind(outs,round(resumen(temps)[,c(1,3,4)],digits=digits+1))
       }
       else{
         out <- round(resumen(temp),digits=digits)
-        outs <- round(resumen(temps)[,c(1,4,5)],digits=digits+1)
+        outs <- round(resumen(temps)[,c(1,3,4)],digits=digits+1)
       }
     }
     outs <- matrix(outs,k,3*k)
@@ -724,7 +738,7 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
   }
   if(object$dist %in% c("Slash","Contaminated normal","Student-t","Hyperbolic")){
     out <- round(resumen(object$chains$extra),digits=digits+1)
-    out[,3] <- 0
+    out[,2] <- 0
     if(object$dist %in% c("Slash","Student-t","Hyperbolic")) rownames(out)[nrow(out)] <- paste0("nu",paste0(rep("",max(nchar(object$name[[1]]))-1),collapse=" "))
     else rownames(out)[nrow(out):(nrow(out)-1)] <- paste0(c("nu2","nu1"),paste0(rep("",max(nchar(object$name[[1]]))-2),collapse=" "))
     cat("\n\nExtra parameter","\n")
@@ -742,6 +756,7 @@ plot.mtar <- function(x, ...,identify){
   dist <- x$dist
   k <- ncol(x$data[[1]]$y)
   out <- vector()
+  out_2 <- matrix(NA,1,2*k)
   if(x$regim > 1) lims <- (x$ps+1):(length(x$threshold.series))
   if(x$dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
     extra <- apply(matrix(x$chains$extra,ncol=n.sim),1,mean)
@@ -764,6 +779,7 @@ plot.mtar <- function(x, ...,identify){
     resu <- y-X%*%location
     resu <- apply(t(resu)*tcrossprod(chol2inv(chol(scale)),resu),2,sum)
     out <- c(out,resu)
+    out_2 <- rbind(out_2,cbind(y,X%*%location))
   }
   out <- matrix(out,length(out),1)
   #set.seed(1011329596)
@@ -790,7 +806,7 @@ plot.mtar <- function(x, ...,identify){
   outm <- do.call("qqnorm",nano_)
   abline(0,1,lty=3)
   if(!missingArg(identify)) identify(outm$x,outm$y,n=max(1,floor(abs(identify))),labels=row.names(out3))
-  return(invisible(out3))
+  return(invisible(list(plot=out3,output=out_2)))
 }
 
 #' @title Forecasting of a multivariate TAR model.
@@ -832,10 +848,10 @@ plot.mtar <- function(x, ...,identify){
 #'
 #' ###### Example 2: Rainfall and two river flows in Colombia
 #' data(riverflows)
-#' fit2 <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Laplace",
+#' fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
 #'              data=subset(riverflows,Date < "2009-04-09"), ars=list(p=c(5,5,5)),
 #'              n.burnin=100, n.sim=3000)
-#' out2 <- forecasting(fit2,data=subset(returns,Date >= "2009-04-09"),row.names=Date)
+#' out2 <- forecasting(fit2,data=subset(riverflows,Date >= "2009-04-09"),row.names=Date)
 #' out2$summary
 #' }
 #'
@@ -883,12 +899,12 @@ forecasting <- function(object,data,credible=0.95,row.names){
   k <- ncol(y)
   ysim <- rbind(matrix(y,nrow(y),k*object$n.sim),matrix(0,pasos,k*object$n.sim))
   for(i in 1:object$n.sim){
+    h <- object$chains$h[i]
+    thresholds <- object$chains$thresholds[,i]
     for(j in (nrow(y)+1):(nrow(y)+pasos)){
-      if(regim > 1){
-        h <- object$chains$h[i]
-        thresholds <- object$chains$thresholds[,i]
+      if(regim > 1)
         regs <- cut(Z[j-h],breaks=c(-Inf,sort(thresholds),Inf),labels=FALSE)
-      }else regs <- 1
+      else regs <- 1
       X <- 1;for(l in 1:object$ars$p[regs]) X <- c(X,ysim[j-l,((i-1)*k+1):(i*k)])
       if(!object$Intercept) X <- X[-1]
       if(object$ars$q[regs] > 0) for(l in 1:object$ars$q[regs]) X <- c(X,X2[j-l,])
@@ -902,6 +918,7 @@ forecasting <- function(object,data,credible=0.95,row.names){
   }
   ysim <- matrix(ysim[-c(1:nrow(y)),],pasos,k*object$n.sim)
   colnames(ysim) <- rep(colnames(y),object$n.sim)
+  if(object$log) ysim <- exp(ysim)
   out_ <- vector()
   predi <- function(x){
     x <- matrix(x,1,length(x))
@@ -909,8 +926,8 @@ forecasting <- function(object,data,credible=0.95,row.names){
     lis <- t(apply(x,1,quantile,probs=ks-credible))
     lss <- t(apply(x,1,quantile,probs=ks))
     dif <- apply(abs(lss-lis),1,which.min)
-    out_ <- c(mean(x),sd(x),lis[dif],lss[dif])
-    names(out_) <- c("Mean","Std.Dev","HDI_Low","HDI_high")
+    out_ <- c(mean(x),lis[dif],lss[dif])
+    names(out_) <- c("Mean","HDI_Low","HDI_high")
     return(out_)
   }
   for(i in 1:k) out_ <- cbind(out_,t(apply(matrix(ysim[,seq(i,k*object$n.sim,k)],pasos,object$n.sim),1,predi)))
@@ -944,7 +961,7 @@ forecasting <- function(object,data,credible=0.95,row.names){
 #'
 #' ###### Example 2: Rainfall and two river flows in Colombia
 #' data(riverflows)
-#' fit2 <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Laplace",
+#' fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
 #'              data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 #' location.chains.2 <- convert(fit2,type="location",regime=3)
 #' summary(location.chains.2)

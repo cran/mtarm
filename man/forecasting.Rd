@@ -43,10 +43,10 @@ out1$summary
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2 <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Laplace",
+fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
              data=subset(riverflows,Date < "2009-04-09"), ars=list(p=c(5,5,5)),
              n.burnin=100, n.sim=3000)
-out2 <- forecasting(fit2,data=subset(returns,Date >= "2009-04-09"),row.names=Date)
+out2 <- forecasting(fit2,data=subset(riverflows,Date >= "2009-04-09"),row.names=Date)
 out2$summary
 }
 

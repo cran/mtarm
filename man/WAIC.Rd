@@ -31,7 +31,7 @@ WAIC(fit1a,fit1b,fit1c)
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2a <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Gaussian",
+fit2a <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Gaussian",
               data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 fit2b <- update(fit2a,dist="Slash")
 fit2c <- update(fit2a,dist="Student-t")

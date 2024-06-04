@@ -16,6 +16,7 @@ mtar(
   n.sim = 500,
   n.burnin = 100,
   n.thin = 1,
+  log = FALSE,
   ...
 )
 }
@@ -64,6 +65,9 @@ iterations for the simulation. As default, \code{n.burnin} is set to 100.}
 
 \item{n.thin}{an (optional) positive integer specifying the required thinning interval
 for the simulation. As default, \code{n.thin} is set to 1.}
+
+\item{log}{an (optional) logical variable. If \code{TRUE}, then the behaviour of the output
+series is described using the exponentiated version of \code{dist}.}
 
 \item{...}{further arguments passed to or from other methods.}
 }
@@ -117,7 +121,7 @@ summary(fit1)
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2 <- mtar(~ ElTrebol + VillaLosada | Rainfall, row.names=Date, dist="Laplace",
+fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
              data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
 summary(fit2)
 }
