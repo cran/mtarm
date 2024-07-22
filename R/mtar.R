@@ -115,7 +115,7 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
     if(dist=="Contaminated normal")
       out <- -2*log(nu[1]*exp(-out*nu[2]/2)*nu[2]^(k/2) + (1-nu[1])*exp(-out/2))
     if(dist=="Slash")
-      out <- -2*lgamma((k+nu)/2) + (k+nu)*log(out/2) -2*log((nu/2)*pgamma(1,shape=(k+nu)/2,rate=out/2))
+      out <- ifelse(out==0,-2*log(nu/(nu+k)),-2*lgamma((k+nu)/2) + (k+nu)*log(out/2) -2*log((nu/2)*pgamma(1,shape=(k+nu)/2,rate=out/2)))
     if(dist=="Hyperbolic")
       out <- -2*log(besselK(nu*sqrt(1+out),(2-k)/2)) -((2-k)/2)*log(1+out) - k*log(nu) +2*log(besselK(nu,1))
     out <- sum(out + k*log(2*pi) + log(det(Sigma)))
@@ -226,7 +226,7 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
     if(dist=="Contaminated normal")
       out <- nu[1]*exp(-out*nu[2]/2)*nu[2]^(k/2) + (1-nu[1])*exp(-out/2)
     if(dist=="Slash")
-      out <- gamma((k+nu)/2)*(nu/2)*pgamma(1,shape=(k+nu)/2,rate=out/2)/((out/2)^((k+nu)/2))
+      out <- ifelse(out==0,nu/(nu+k),gamma((k+nu)/2)*(nu/2)*pgamma(1,shape=(k+nu)/2,rate=out/2)/((out/2)^((k+nu)/2)))
     if(dist=="Hyperbolic")
       out <- besselK(nu*sqrt(1+out),(2-k)/2)*(1+out)^((2-k)/4)*nu^(k/2)/besselK(nu,1)
     out <- out/((2*pi)^(k/2)*det(Sigma)^(1/2))
@@ -413,7 +413,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   }
   if(!is.null(ars$q)){
     ars$q <- ceiling(abs(ars$q))
-    if(min(ars$q) > 0 ){
+    if(max(ars$q) > 0){
       mx2 <- model.part(Formula(formula), data = mmf, rhs = 3, terms = TRUE)
       X2 <- model.matrix(mx2, data = mmf)
       if(attr(terms(mx2),"intercept")){
@@ -497,7 +497,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   if(dist=="Hyperbolic"){
     if(is.null(prior$gamma0)) prior$gamma0 <- 0.1
     if(is.null(prior$eta0)) prior$eta0 <- 4
-    chains$extra <- matrix(mean(prior$gamma0,prior$eta0),1,1)
+    chains$extra <- matrix((prior$gamma0+prior$eta0)/2,1,1)
     nus <- matrix(seq(prior$gamma0,prior$eta0,length=1001),1001,1)
     num1 <- nus[2:length(nus)] - nus[1:(length(nus)-1)]
     num2 <- (nus[2:length(nus)] + nus[1:(length(nus)-1)])/2
@@ -506,16 +506,16 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   if(dist=="Student-t"){
     if(is.null(prior$gamma0)) prior$gamma0 <- 1
     if(is.null(prior$eta0)) prior$eta0 <- 100
-    chains$extra <- matrix(mean(prior$gamma0,prior$eta0),1,1)
+    chains$extra <- matrix((prior$gamma0+prior$eta0)/2,1,1)
     nus <- matrix(seq(prior$gamma0,prior$eta0,length=1001),1001,1)
     num1 <- nus[2:length(nus)] - nus[1:(length(nus)-1)]
     num2 <- (nus[2:length(nus)] + nus[1:(length(nus)-1)])/2
     resto <- (nus/2)*log(nus/2) - lgamma(nus/2)
   }
   if(dist=="Slash"){
-    chains$extra <- matrix(100,1,1)
     if(is.null(prior$gamma0)) prior$gamma0 <- 1/1000000000
     if(is.null(prior$eta0)) prior$eta0 <- 1/1000000000
+    chains$extra <- matrix(100,1,1)
   }
   if(dist=="Contaminated normal"){
     chains$extra <- matrix(c(0.01,0.99),2,1)
@@ -653,14 +653,13 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   }
   if(dist %in% c("Student-t","Hyperbolic","Slash","Contaminated normal"))
     chains$extra <- matrix(chains$extra[,n.burnin + seq(1,n.sim*n.thin,n.thin)],ncol=n.sim)
-  out_ <- list(data=data,chains=chains,n.sim=n.sim,regim=regim,name=name,dist=dist,ps=ps,ars=ars,formula=Formula(formula),Intercept=Intercept,call=match.call(),log=log)
+  out_ <- list(data=data,chains=chains,n.sim=n.sim,regim=regim,name=name,dist=dist,ps=ps,ars=ars,formula=Formula(formula),Intercept=Intercept,call=match.call(),log=log,response.series=D)
   if(regim > 1){
     out_$chains$thresholds <- matrix(thresholds.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)],ncol=n.sim)
     out_$chains$h <- hs.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)]
     out_$threshold.series=Z
     out_$ts=paste0(colnames(Z),".lag(",mean(out_$chains$h),")")
     if(max(ars$q) > 0) out_$covariable.series=X2
-    out_$response.series=D
   }
   class(out_) <- "mtar"
   return(out_)
@@ -751,7 +750,7 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
 #'
 #' @method plot mtar
 #' @export
-plot.mtar <- function(x, ...,identify){
+plot.mtar <- function(x,...,identify){
   n.sim <- x$n.sim
   dist <- x$dist
   k <- ncol(x$data[[1]]$y)
@@ -875,6 +874,7 @@ forecasting <- function(object,data,credible=0.95,row.names){
   mmf$drop.unused.levels <- TRUE
   mmf[[1]] <- as.name("model.frame")
   mmf <- eval(mmf, parent.frame())
+  row.names <- as.vector(as.character(model.extract(mmf,row.names)))
   if(regim > 1){
     mz <- model.part(Formula(object$formula), data = mmf, rhs = 2, terms = TRUE)
     Z <- model.matrix(mz, data = mmf)
@@ -882,9 +882,9 @@ forecasting <- function(object,data,credible=0.95,row.names){
       Znames <- colnames(Z)
       Z <- as.matrix(Z[,-1])
     }
-    pasos <- nrow(Z)
     Z <- rbind(object$threshold.series,Z)
   }
+  pasos <- length(row.names)
   if(max(object$ars$q) > 0){
     mx2 <- model.part(Formula(object$formula), data = mmf, rhs = 3, terms = TRUE)
     X2 <- model.matrix(mx2, data = mmf)
@@ -931,12 +931,51 @@ forecasting <- function(object,data,credible=0.95,row.names){
     return(out_)
   }
   for(i in 1:k) out_ <- cbind(out_,t(apply(matrix(ysim[,seq(i,k*object$n.sim,k)],pasos,object$n.sim),1,predi)))
-  if(!missingArg(row.names)){
-    row.names <- as.vector(as.character(model.extract(mmf,row.names)))
-    rownames(out_) <- row.names
-    rownames(ysim) <- row.names
+  rownames(out_) <- row.names
+  rownames(ysim) <- row.names
+  out__ <- list(ypred=ysim,summary=out_,y=y)
+  class(out__) <- "forecastmtar"
+  return(out__)
+}
+#' @method plot forecastmtar
+#' @export
+plot.forecastmtar <- function(x,...,n,historical=list(),forecasts=list(),forecasts.PI=list()){
+  k <- ncol(x$y)
+  out_ <- x$summary
+  pasos <- nrow(out_)
+  y <- x$y
+  if(missingArg(n)) n <- nrow(y) else n <- ceiling(abs(n))
+  y2 <- rbind(y[(nrow(y)-n+1):nrow(y),],out_[,seq(1,3*k,3)])
+  forecasts$xlim <- historical$xlim <- c(1,n+pasos)
+  forecasts$x <- (n+1):(n+pasos)
+  forecasts.PI$ylab <- forecasts.PI$xlab <- historical$xlab <- historical$ylab <- ""
+  if(is.null(historical$type)) historical$type <- "l"
+  if(is.null(historical$lty)) historical$lty <- 1
+  if(is.null(historical$col)) historical$col <- "black"
+  forecasts$xlim <- c(1,n+pasos)
+  if(is.null(forecasts$type)) forecasts$type <- "l"
+  if(is.null(forecasts$lty)) forecasts$lty <- 1
+  if(is.null(forecasts$col)) forecasts$col <- "blue"
+  if(is.null(forecasts$xlab)) forecasts$xlab <- ""
+  if(is.null(forecasts$ylab)) forecasts$ylab <- ""
+  if(is.null(forecasts.PI$density)) forecasts.PI$density <- NA
+  if(is.null(forecasts.PI$col)) forecasts.PI$col <- "light gray"
+  for(i in 1:k){
+    dev.new()
+    historical$ylim <- forecasts.PI$ylim <- forecasts$ylim <- range(y2[,i],out_[,1:3+3*(i-1)])
+    historical$x <- y[(nrow(y)-n+1):nrow(y),i]
+    do.call("plot",historical)
+    xs <- c((n+1):(n+pasos),(n+pasos):(n+1))
+    ys <- c(out_[,2+3*(i-1)],out_[nrow(out_):1,3+3*(i-1)])
+    par(new=TRUE)
+    forecasts.PI$x <- xs
+    forecasts.PI$y <- ys
+    do.call("polygon",forecasts.PI)
+    forecasts$y <- out_[,1+3*(i-1)]
+    forecasts$main <- colnames(y)[i]
+    par(new=TRUE)
+    do.call("plot",forecasts)
   }
-  return(list(ypred=ysim,summary=out_))
 }
 #'
 #' @title Converts chains from the Bayesian estimation of a multivariate TAR model to a mcmc object.
@@ -1106,7 +1145,7 @@ simtar <- function(n,k=2,ars=list(p=1),Intercept=TRUE,parms,delay=0,thresholds=0
       stop("For 'Contaminated normal' distribution the extra parameter must be a bidimensional vector with values in the interval (0,1)!",call.=FALSE)
   }
   if(regim > 1) regimen <- cut(t.series[(ps+1-delay):(length(t.series)-delay)],breaks=c(-Inf,thresholds,Inf),labels=1:regim)
-  regimen <- matrix(1,n,1)
+  else regimen <- matrix(1,n,1)
   myseries <- matrix(rnorm((n+ps)*k),n+ps,k)
   for(i in 1:regim){
     if(ncol(parms[[i]]$location)!=k | nrow(parms[[i]]$location)!=(Intercept+ars$p[i]*k+ars$q[i]*r+ars$d[i]))

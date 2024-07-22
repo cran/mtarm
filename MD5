@@ -1,8 +1,8 @@
-0f14ea1696f08bc1b7499853e9fa3609 *DESCRIPTION
-17058f1719e08e330e17f6d479e7f66d *NAMESPACE
-2eed0bdf253d4814c2ccd5df24467f20 *R/mtar.R
+9c0246211641ea536318bd53451de7b2 *DESCRIPTION
+fcb3955686709a85ded59caf410341bf *NAMESPACE
+38d3a6cb33aa178b9693c0bb2e88fe7a *R/mtar.R
 3f1fc219fe98622abafec10ea207951d *data/returns.rda
-db26c0f1d6cadcbc02cec1d75d4b90eb *data/riverflows.rda
+ba963c8be6665bfdaedd6cb54c96fd95 *data/riverflows.rda
 62c9a5a816895e2c2671a8f0b3bbf768 *man/DIC.Rd
 c1b94fa128437fce00e7b2ae37f9c705 *man/WAIC.Rd
 b6ddba54f73968bef6953928111dd1f0 *man/convert.Rd

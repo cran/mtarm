@@ -2,7 +2,7 @@ Package: mtarm
 Type: Package
 Title: Bayesian Estimation of Multivariate Threshold Autoregressive
         Models
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(person("Luis Hernando","Vanegas",role=c("aut","cre"),email="lhvanegasp@unal.edu.co"),
              person("Sergio Alejandro","Calderón",role="aut",email="sacalderonv@unal.edu.co"),             
              person("Luz Marina","Rondón",role="aut",email="lmrondonp@unal.edu.co"))
@@ -19,6 +19,6 @@ LazyData: false
 RoxygenNote: 7.2.3
 NeedsCompilation: no
 License: GPL-2 | GPL-3
-Packaged: 2024-06-04 16:17:23 UTC; 57312
+Packaged: 2024-07-19 16:47:24 UTC; 57312
 Repository: CRAN
-Date/Publication: 2024-06-04 17:30:01 UTC
+Date/Publication: 2024-07-22 18:20:02 UTC
