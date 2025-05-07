@@ -7,23 +7,23 @@
 \format{
 A data frame with 1505 rows and 4 variables:
 \describe{
-  \item{Date}{a vector indicating the dates of the measurements.}
-  \item{COLCAP}{a numeric vector indicating the returns of COLCAP.}
-  \item{SP500}{a numeric vector indicating the returns of SP500.}
-  \item{BOVESPA}{a numeric vector indicating the returns of BOVESPA.}
+  \item{Date}{a vector that indicates the date each measurement was performed.}
+  \item{COLCAP}{a numerical vector indicating the returns on closing prices of COLCAP.}
+  \item{SP500}{a numerical vector indicating the returns on closing prices of SP500.}
+  \item{BOVESPA}{a numerical vector indicating the returns on closing prices of BOVESPA.}
 }
 }
 \usage{
 data(returns)
 }
 \description{
-These data correspond to the returns of closing prices of the
-Colcap, Bovespa, and S&P 500 indexes from 2010-02-01 to 2016-03-31 (1505 time
-points). Colcap is a leading indicator of the price dynamics of the 20 most
-liquid shares on the Colombian Stock Market. Bovespa is the Brazilian stock
-market index, the world's thirteenth largest and most important stock exchange,
-and the first in Latin America. Finally, the Standard & Poor's 500 (S&P 500)
-index is a stock index based on the 500 largest companies in the United States.
+These data correspond to the returns on closing prices of the Colcap,
+Bovespa, and S&P 500 indexes from February 10, 2010 to March 31, 2016 (1505 time
+points). Colcap is a leading indicator of the price dynamics of the 20 most liquid
+shares on the Colombian stock market. Bovespa is the Brazilian stock market index,
+the world's thirteenth largest and most important stock exchange, and the first in
+Latin America. Finally, the Standard & Poor's 500 (S&P 500) index is a stock index
+based on the 500 largest companies in the United States.
 }
 \examples{
 data(returns)

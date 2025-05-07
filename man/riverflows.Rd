@@ -7,27 +7,24 @@
 \format{
 A data frame with 1200 rows and 4 variables:
 \describe{
-  \item{Date}{a vector indicating the dates of the measurements.}
-  \item{Bedon}{a numeric vector indicating the Bedon river flow.}
-  \item{LaPlata}{a numeric vector indicating the La Plata river flow.}
-  \item{Rainfall}{a numeric vector indicating the rainfall.}
+  \item{Date}{a vector that indicates the date each measurement was performed.}
+  \item{Bedon}{a numerical vector indicating the Bedon river flow.}
+  \item{LaPlata}{a numerical vector indicating the La Plata river flow.}
+  \item{Rainfall}{a numerical vector indicating the rainfall.}
 }
 }
 \usage{
 data(riverflows)
 }
 \description{
-The data represent daily rainfall (in mm) and two river
-flows (in \eqn{m^3}/s) in southern Colombia. A meteorological station located
-with an altitude of 2400 meters was used to measure rainfall. In the
-first case, the El Trebol hydrological station was used to measure the
-flow in the Bedon river at an altitude of 1720 meters. In the second
-case, the Villalosada hydrological station measured the flow in the
-La Plata river at an altitude of 1300 meters. Geographically, the
-stations are located near the equator. The last characteristic allows
-for control over hydrological and meteorological factors that might
-distort a dynamic relationship. January 1, 2006, to April 14, 2009,
-is the sample period.
+The data represent daily rainfall (in mm) and two river flows (in \eqn{m^3}/s)
+in southern Colombia. A meteorological station located at an altitude of 2400 meters was
+used to measure rainfall. The El Trebol hydrological station was used to measure the flow
+in the Bedon river at an altitude of 1720 meters. The Villalosada hydrological station
+measured the flow in the La Plata river at an altitude of 1300 meters. Geographically, the
+stations are located near the equator. The last characteristic allows for control over
+hydrological and meteorological factors that might distort the dynamic relationship between
+rainfall and river flows. January 1, 2006, to April 14, 2009, was the sample period.
 }
 \examples{
 data(riverflows)

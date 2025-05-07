@@ -2,7 +2,7 @@
 % Please edit documentation in R/mtar.R
 \name{mtar}
 \alias{mtar}
-\title{Bayesian estimation of a multivariate threshold autoregressive (TAR) model.}
+\title{Bayesian estimation of a multivariate Threshold Autoregressive (TAR) model.}
 \usage{
 mtar(
   formula,
@@ -21,7 +21,7 @@ mtar(
 )
 }
 \arguments{
-\item{formula}{a three-part expression of type \code{Formula} describing the TAR model
+\item{formula}{A three-part expression of type \code{Formula} describing the TAR model
 to be fitted to the data. In the first part, the variables in the
 multivariate output series are listed; in the second part, the threshold
 series is specified, and in the third part, the variables in the
@@ -45,26 +45,27 @@ elements as there are regimes in the TAR model.}
 \item{row.names}{an (optional) vector that allows the user to name the time point to
 which each row in the data set corresponds.}
 
-\item{dist}{an (optional) character string that allows the user to specify the multivariate
-distribution to be used to describe the behavior of the noise process. The
-available options are: Gaussian ("Gaussian"), Student-\eqn{t} ("Student-t"),
-Slash ("Slash"), Symmetric Hyperbolic ("Hyperbolic"), Laplace ("Laplace"), and
-contaminated normal ("Contaminated normal"). As default, \code{dist} is set to
-"Gaussian".}
+\item{dist}{an (optional) character string that allows the user to specify the
+multivariate distribution to be used to describe the noise process
+behavior. The available options are: Gaussian ("Gaussian"), Student-\eqn{t}
+("Student-t"), Slash ("Slash"), Symmetric Hyperbolic ("Hyperbolic"),
+Laplace ("Laplace"), Contaminated normal ("Contaminated normal"),
+Skew-normal ("Skew-normal") and Skew-Student-\eqn{t} ("Skew-Student-t").
+By default, \code{dist} is set to "Gaussian".}
 
 \item{prior}{an (optional) list that allows the user to specify the values of the
 hyperparameters, that is, allows to specify the values of the parameters
 of the prior distributions.}
 
 \item{n.sim}{an (optional) positive integer specifying the required number of iterations
-for the simulation after the burn-in period. As default, \code{n.sim} is set
+for the simulation after the burn-in period. By default, \code{n.sim} is set
 to 500.}
 
 \item{n.burnin}{an (optional) positive integer specifying the required number of burn-in
-iterations for the simulation. As default, \code{n.burnin} is set to 100.}
+iterations for the simulation. By default, \code{n.burnin} is set to 100.}
 
 \item{n.thin}{an (optional) positive integer specifying the required thinning interval
-for the simulation. As default, \code{n.thin} is set to 1.}
+for the simulation. By default, \code{n.thin} is set to 1.}
 
 \item{log}{an (optional) logical variable. If \code{TRUE}, then the behaviour of the output
 series is described using the exponentiated version of \code{dist}.}
@@ -109,20 +110,22 @@ list with components including
 This function uses Gibbs sampling to generate a sample from the posterior
              distribution of the parameters of a multivariate TAR model when the noise
              process follows Gaussian, Student-\eqn{t}, Slash, Symmetric Hyperbolic,
-             Contaminated normal, or Laplace distribution.
+             Contaminated normal, Laplace, Skew-normal or skew-\eqn{t} distribution.
 }
 \examples{
 \donttest{
 ###### Example 1: Returns of the closing prices of three financial indexes
 data(returns)
-fit1 <- mtar(~ COLCAP + BOVESPA | SP500, row.names=Date, dist="Slash",
-             data=returns, ars=list(p=c(1,1,2)), n.burnin=100, n.sim=3000)
+fit1 <- mtar(~ COLCAP + BOVESPA | SP500, data=returns, row.names=Date,
+             dist="Gaussian", ars=list(p=c(1,1,2)), n.burnin=100,
+             n.sim=3000, n.thin=2)
 summary(fit1)
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
-             data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
+fit2 <- mtar(~ Bedon + LaPlata | Rainfall, data=riverflows, row.names=Date,
+             dist="Gaussian", ars=list(p=c(5,5,5)), n.burnin=2000,
+             n.sim=3000, n.thin=2)
 summary(fit2)
 }
 

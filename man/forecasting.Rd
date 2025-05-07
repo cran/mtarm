@@ -4,7 +4,14 @@
 \alias{forecasting}
 \title{Forecasting of a multivariate TAR model.}
 \usage{
-forecasting(object, data, credible = 0.95, row.names)
+forecasting(
+  object,
+  data,
+  out.of.sample = FALSE,
+  credible = 0.95,
+  row.names,
+  setar = NULL
+)
 }
 \arguments{
 \item{object}{an object of the class \emph{mtar}.}
@@ -15,17 +22,22 @@ series as well as the exogenous series in the model.
 If not found in data, the variables are taken from \code{environment(formula)},
 typically the environment from which \code{mtar} is called.}
 
-\item{credible}{an (optional) value for the level of the credible intervals. As default, \code{credible} is set to 0.95.}
+\item{out.of.sample}{an (optional) logical variable. If \code{TRUE}, then the log-score is computed, which is a measurement to assess density forecasts. Therefore, the data.frame specified in the argument \code{data} must to include the true values of the output series.}
 
-\item{row.names}{an (optional) vector that allows the user to name the time point to
+\item{credible}{an (optional) value for the level of the credible intervals. By default, \code{credible} is set to 0.95.}
+
+\item{row.names}{an vector that allows the user to name the time point to
 which each row in the data set \code{data} corresponds.}
+
+\item{setar}{an (optional) positive integer indicating the component of the output series which is
+the threshold variable. By default,\code{setar} is set to \code{NULL}, which indicates that the fitted model is not a SETAR.}
 }
 \value{
 a list with the following component
 \tabular{ll}{
 \code{ypred}   \tab a matrix with the results of the forecasting,\cr
 \tab \cr
-\code{summary} \tab a matrix with the mean, standard deviation, and the HDP credible intervals of the forecasting,\cr
+\code{summary} \tab a matrix with the mean and credible intervals of the forecasting,\cr
 }
 }
 \description{
@@ -35,17 +47,17 @@ This function computes forecasting from a fitted multivariate TAR model.
 \donttest{
 ###### Example 1: Returns of the closing prices of three financial indexes
 data(returns)
-fit1 <- mtar(~ COLCAP + BOVESPA | SP500, row.names=Date, dist="Slash",
-             data=subset(returns,Date < "2016-03-20"), ars=list(p=c(1,1,2)),
-             n.burnin=100, n.sim=3000)
+fit1 <- mtar(~ COLCAP + BOVESPA | SP500, data=returns, row.names=Date,
+             dist="Gaussian", ars=list(p=c(1,1,2)), n.burnin=100,
+             n.sim=3000, n.thin=2)
 out1 <- forecasting(fit1,data=subset(returns,Date >= "2016-03-20"),row.names=Date)
 out1$summary
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
-             data=subset(riverflows,Date < "2009-04-09"), ars=list(p=c(5,5,5)),
-             n.burnin=100, n.sim=3000)
+fit2 <- mtar(~ Bedon + LaPlata | Rainfall, data=riverflows, row.names=Date,
+             dist="Gaussian", ars=list(p=c(5,5,5)), n.burnin=2000,
+             n.sim=3000, n.thin=2)
 out2 <- forecasting(fit2,data=subset(riverflows,Date >= "2009-04-09"),row.names=Date)
 out2$summary
 }

@@ -14,8 +14,10 @@ simtar(
   thresholds = 0,
   t.series,
   ex.series,
-  dist = "gaussian",
-  extra
+  dist = "Gaussian",
+  delta = NULL,
+  extra,
+  setar = NULL
 )
 }
 \arguments{
@@ -43,10 +45,15 @@ to location parameters, while the second corresponds to scale parameters.}
 distribution to be used to describe the behavior of the noise process. The
 available options are: Gaussian ("Gaussian"), Student-\eqn{t} ("Student-t"),
 Slash ("Slash"), Symmetric Hyperbolic ("Hyperbolic"), Laplace ("Laplace"), and
-contaminated normal ("Contaminated normal"). As default, \code{dist} is set to
+contaminated normal ("Contaminated normal"). By default,\code{dist} is set to
 "Gaussian".}
 
+\item{delta}{an (optional) vector with the values of the skewness parameters. By default,\code{delta} is set to \code{NULL}.}
+
 \item{extra}{a value indicating the value of the extra parameter of the noise process distribution, if any.}
+
+\item{setar}{an (optional) positive integer indicating the component of the output series which should
+be the threshold variable. By default,\code{setar} is set to \code{NULL}.}
 }
 \value{
 a \code{data.frame} containing the output series, threshold series (if any), and multivariate exogenous series (if any).
@@ -55,6 +62,7 @@ a \code{data.frame} containing the output series, threshold series (if any), and
 This function simulates multivariate time series according to a user-specified TAR model.
 }
 \examples{
+\donttest{
 ###### Simulation of a trivariate TAR model with two regimes
 n <- 2000
 k <- 3
@@ -62,17 +70,21 @@ ars <- list(p=c(1,2))
 Z <- as.matrix(arima.sim(n=n+max(ars$p),list(ar=c(0.5))))
 Intercept <- TRUE
 parms <- list()
-for(i in 1:length(ars$p)){
-   np <- Intercept + ars$p[i]*k
-   parms[[i]] <- list()
-   parms[[i]]$location <- c(ifelse(runif(np*k)<=0.5,1,-1)*rbeta(np*k,shape1=4,shape2=16))
-   parms[[i]]$location <- matrix(parms[[i]]$location,np,k)
-   parms[[i]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
+for(j in 1:length(ars$p)){
+   np <- Intercept + ars$p[j]*k
+   parms[[j]] <- list()
+   parms[[j]]$location <- c(ifelse(runif(np*k)<=0.5,1,-1)*rbeta(np*k,shape1=4,shape2=16))
+   parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
+   parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
 }
-thresholds <- quantile(Z,probs=seq(1,length(ars$p)-1)/length(ars$p))
+thresholds <- quantile(Z,probs=(0.85 + runif(1)*0.3)*seq(1,length(ars$p)-1)/length(ars$p))
 out1 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
                thresholds=thresholds,t.series=Z,dist="Student-t",extra=6)
 str(out1)
+
+fit1 <- mtar(~ Y1 + Y2 + Y3 | t.series, data=out1, ars=ars, dist="Student-t",
+             nsim=3000, n.burn=2000, n.thin=2)
+summary(fit1)
 
 ###### Simulation of a trivariate VAR model
 n <- 2000
@@ -80,15 +92,47 @@ k <- 3
 ars <- list(p=2)
 Intercept <- TRUE
 parms <- list()
-for(i in 1:length(ars$p)){
-   np <- Intercept + ars$p[i]*k
-   parms[[i]] <- list()
-   parms[[i]]$location <- c(ifelse(runif(np*k)<=0.5,1,-1)*rbeta(np*k,shape1=4,shape2=16))
-   parms[[i]]$location <- matrix(parms[[i]]$location,np,k)
-   parms[[i]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
+for(j in 1:length(ars$p)){
+   np <- Intercept + ars$p[j]*k
+   parms[[j]] <- list()
+   parms[[j]]$location <- c(ifelse(runif(np*k)<=0.5,1,-1)*rbeta(np*k,shape1=4,shape2=16))
+   parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
+   parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
 }
 out2 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
                dist="Slash",extra=2)
 str(out2)
 
+fit2 <- mtar(~ Y1 + Y2 + Y3, data=out2, ars=ars, dist="Slash", nsim=3000,
+             n.burn=2000, n.thin=2)
+summary(fit2)
+toy <- data.frame(Date=rep(0,10))
+f2 <- forecasting(fit2, data=toy, row.names=Date)
+f2$summary
+plot(f2, n=100)
+
+n <- 5010
+k <- 3
+ars <- list(p=c(1,2))
+Intercept <- TRUE
+parms <- list()
+for(j in 1:length(ars$p)){
+  np <- Intercept + ars$p[j]*k
+  parms[[j]] <- list()
+  parms[[j]]$location <- c(ifelse(runif(np*k)<=0.5,1,-1)*rbeta(np*k,shape1=4,shape2=16))
+  parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
+  parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
+}
+out3 <- simtar(n=n, k=k, ars=ars, Intercept=Intercept, parms=parms, delay=2,
+               thresholds=-1, dist="Laplace", setar=2)
+str(out3)
+
+fit3 <- mtar(~ Y1 + Y2 + Y3 | Y2, data=out3, ars=ars, dist="Laplace",
+             nsim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
+summary(fit3)
+toy <- data.frame(Date=rep(0,10))
+f3 <- forecasting(fit3, setar=2, data=toy, row.names=Date)
+f3$summary
+plot(f3, n=100)
+}
 }

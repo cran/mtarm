@@ -9,30 +9,32 @@ DIC(..., verbose = TRUE, digits = max(3, getOption("digits") - 2))
 \arguments{
 \item{...}{one or several objects of the class \emph{mtar}.}
 
-\item{verbose}{an (optional) logical switch indicating if should the report of results be printed. As default, \code{verbose} is set to TRUE.}
+\item{verbose}{an (optional) logical switch indicating if should the report of results be printed. By default,\code{verbose} is set to TRUE.}
 
-\item{digits}{an (optional) integer indicating the number of digits to print. As default, \code{digits} is set to \code{max(3, getOption("digits") - 2)}.}
+\item{digits}{an (optional) integer indicating the number of digits to print. By default,\code{digits} is set to \code{max(3, getOption("digits") - 2)}.}
 }
 \value{
 A \code{data.frame} with the values of the DIC for each \emph{mtar} object in the input.
 }
 \description{
-This function computes the Deviance information criterion (DIC) for objects of class \code{mtar}.
+This function computes the Deviance Information Criterion (DIC) for objects of class \code{mtar}.
 }
 \examples{
 \donttest{
 ###### Example 1: Returns of the closing prices of three financial indexes
 data(returns)
-fit1a <- mtar(~ COLCAP + BOVESPA | SP500, row.names=Date, dist="Gaussian",
-              data=returns, ars=list(p=c(1,1,2)), n.burnin=100, n.sim=3000)
+fit1a <- mtar(~ COLCAP + BOVESPA | SP500, data=returns, row.names=Date,
+              dist="Gaussian", ars=list(p=c(1,1,2)), n.burnin=2000,
+              n.sim=3000, n.thin=2)
 fit1b <- update(fit1a,dist="Slash")
 fit1c <- update(fit1a,dist="Student-t")
 DIC(fit1a,fit1b,fit1c)
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2a <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Gaussian",
-              data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
+fit2a <- mtar(~ Bedon + LaPlata | Rainfall, data=riverflows, row.names=Date,
+              dist="Gaussian", ars=list(p=c(5,5,5)), n.burnin=2000,
+              n.sim=3000, n.thin=2)
 fit2b <- update(fit2a,dist="Slash")
 fit2c <- update(fit2a,dist="Student-t")
 DIC(fit2a,fit2b,fit2c)

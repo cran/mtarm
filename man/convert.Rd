@@ -4,16 +4,10 @@
 \alias{convert}
 \title{Converts chains from the Bayesian estimation of a multivariate TAR model to a mcmc object.}
 \usage{
-convert(object, type = c("location", "scale", "extra"), regime = 1)
+convert(object)
 }
 \arguments{
 \item{object}{an object of the class \emph{mtar}.}
-
-\item{type}{an (optional) character string that allows the user to specify the parameter that corresponds to the
-chains to convert. The available options are: "location", "scale" and "extra". As default, \code{type} is set to "location".}
-
-\item{regime}{an (optional) integer value that allows the user to specify the regime that corresponds to the chains to plot.
-As default, \code{regime} is set to 1.}
 }
 \value{
 a \code{mcmc}-type object.
@@ -25,19 +19,21 @@ This function converts the chains obtained from the Bayesian estimation of a mul
 \donttest{
 ###### Example 1: Returns of the closing prices of three financial indexes
 data(returns)
-fit1 <- mtar(~ COLCAP + BOVESPA | SP500, row.names=Date, dist="Slash",
-             data=returns, ars=list(p=c(1,1,2)), n.burnin=100, n.sim=3000)
-location.chains.1 <- convert(fit1,type="location",regime=2)
-summary(location.chains.1)
-plot(location.chains.1)
+fit1 <- mtar(~ COLCAP + BOVESPA | SP500, data=returns, row.names=Date,
+             dist="Gaussian", ars=list(p=c(1,1,2)), n.burnin=100,
+             n.sim=3000, n.thin=2)
+chains1 <- convert(fit1)
+summary(chains1$location[[1]])
+plot(chains1$location[[1]])
 
 ###### Example 2: Rainfall and two river flows in Colombia
 data(riverflows)
-fit2 <- mtar(~ Bedon + LaPlata | Rainfall, row.names=Date, dist="Laplace",
-             data=riverflows, ars=list(p=c(5,5,5)), n.burnin=100, n.sim=3000)
-location.chains.2 <- convert(fit2,type="location",regime=3)
-summary(location.chains.2)
-plot(location.chains.2)
+fit2 <- mtar(~ Bedon + LaPlata | Rainfall, data=riverflows, row.names=Date,
+             dist="Gaussian", ars=list(p=c(5,5,5)), n.burnin=2000,
+             n.sim=3000, n.thin=2)
+chains2 <- convert(fit2)
+summary(chains2$location[[2]])
+plot(chains2$location[[2]])
 }
 
 }
