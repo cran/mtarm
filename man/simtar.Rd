@@ -67,6 +67,7 @@ This function simulates multivariate time series according to a user-specified T
 n <- 2000
 k <- 3
 ars <- list(p=c(1,2))
+l <- length(ars$p) - 1
 Z <- as.matrix(arima.sim(n=n+max(ars$p),list(ar=c(0.5))))
 Intercept <- TRUE
 parms <- list()
@@ -77,13 +78,13 @@ for(j in 1:length(ars$p)){
    parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
    parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
 }
-thresholds <- quantile(Z,probs=(0.85 + runif(1)*0.3)*seq(1,length(ars$p)-1)/length(ars$p))
+thresholds <- quantile(Z,probs=(0.85 + runif(l)*0.3)*c(1:l)/(l+1))
 out1 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
                thresholds=thresholds,t.series=Z,dist="Student-t",extra=6)
 str(out1)
 
 fit1 <- mtar(~ Y1 + Y2 + Y3 | t.series, data=out1, ars=ars, dist="Student-t",
-             nsim=3000, n.burn=2000, n.thin=2)
+             n.sim=3000, n.burn=2000, n.thin=2)
 summary(fit1)
 
 ###### Simulation of a trivariate VAR model
@@ -103,7 +104,7 @@ out2 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
                dist="Slash",extra=2)
 str(out2)
 
-fit2 <- mtar(~ Y1 + Y2 + Y3, data=out2, ars=ars, dist="Slash", nsim=3000,
+fit2 <- mtar(~ Y1 + Y2 + Y3, data=out2, ars=ars, dist="Slash", n.sim=3000,
              n.burn=2000, n.thin=2)
 summary(fit2)
 toy <- data.frame(Date=rep(0,10))
@@ -128,7 +129,7 @@ out3 <- simtar(n=n, k=k, ars=ars, Intercept=Intercept, parms=parms, delay=2,
 str(out3)
 
 fit3 <- mtar(~ Y1 + Y2 + Y3 | Y2, data=out3, ars=ars, dist="Laplace",
-             nsim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
+             n.sim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
 summary(fit3)
 toy <- data.frame(Date=rep(0,10))
 f3 <- forecasting(fit3, setar=2, data=toy, row.names=Date)

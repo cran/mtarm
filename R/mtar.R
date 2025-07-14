@@ -112,14 +112,14 @@ DIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
       Sigmav <- diag(k) - matrix(delta,k,k)*A*matrix(delta,k,k,byrow=TRUE)
       out <- colSums(t(resu)*tcrossprod(A,resu))
       if(dist=="Skew-normal"){
-        if(k > 1) sum0 <- apply(muv,1,function(x) pmvnorm(lower=-x,upper=rep(Inf,k),sigma=Sigmav))
-        else sum0 <- apply(muv,1,function(x) pnorm(-x/sqrt(Sigmav),lower.tail=FALSE))
+        if(k > 1) sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pmvnorm(lower=-x,upper=rep(Inf,k),sigma=Sigmav)))
+        else sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pnorm(-x/sqrt(Sigmav),lower.tail=FALSE)))
         out <- 2^k*exp(-out/2)*(det(A)^(1/2))*sum0/(2*pi)^(k/2)
       }
       if(dist=="Skew-Student-t"){
         muv <- muv*matrix(sqrt((nu + k)/(nu + out)),nrow(muv),k)
-        if(k > 1) sum0 <- apply(muv,1,function(x) pmvt(lower=-x,upper=rep(Inf,k),sigma=Sigmav,df=round(nu,0)+k))
-        else sum0 <- apply(muv,1,function(x) pt(-x/sqrt(Sigmav),df=nu,lower.tail=FALSE))
+        if(k > 1) sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pmvt(lower=-x,upper=rep(Inf,k),sigma=Sigmav,df=round(nu,0)+k)))
+        else sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pt(-x/sqrt(Sigmav),df=nu,lower.tail=FALSE)))
         out <- 2^k*(1 + out/nu)^(-(nu+k)/2)*(det(A)^(1/2))*gamma((nu+k)/2)*sum0/((nu*pi)^(k/2)*gamma(nu/2))
       }
     }else{
@@ -254,14 +254,14 @@ WAIC <- function(...,verbose=TRUE,digits=max(3, getOption("digits") - 2)){
       Sigmav <- diag(k) - matrix(delta,k,k)*A*matrix(delta,k,k,byrow=TRUE)
       out <- colSums(t(resu)*tcrossprod(A,resu))
       if(dist=="Skew-normal"){
-        if(k > 1) sum0 <- apply(muv,1,function(x) pmvnorm(lower=-x,upper=rep(Inf,k),sigma=Sigmav))
-        else sum0 <- apply(muv,1,function(x) pnorm(-x/sqrt(Sigmav),lower.tail=FALSE))
+        if(k > 1) sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pmvnorm(lower=-x,upper=rep(Inf,k),sigma=Sigmav)))
+        else sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pnorm(-x/sqrt(Sigmav),lower.tail=FALSE)))
         out <- 2^k*exp(-out/2)*(det(A)^(1/2))*sum0/(2*pi)^(k/2)
       }
       if(dist=="Skew-Student-t"){
         muv <- muv*matrix(sqrt((nu + k)/(nu + out)),nrow(muv),k)
-        if(k > 1) sum0 <- apply(muv,1,function(x) pmvt(lower=-x,upper=rep(Inf,k),sigma=Sigmav,df=round(nu,0)+k))
-        else sum0 <- apply(muv,1,function(x) pt(-x/sqrt(Sigmav),df=nu,lower.tail=FALSE))
+        if(k > 1) sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pmvt(lower=-x,upper=rep(Inf,k),sigma=Sigmav,df=round(nu,0)+k)))
+        else sum0 <- apply(muv,1,function(x) max(.Machine$double.xmin,pt(-x/sqrt(Sigmav),df=nu,lower.tail=FALSE)))
         out <- 2^k*(1 + out/nu)^(-(nu+k)/2)*(det(A)^(1/2))*gamma((nu+k)/2)*sum0/((nu*pi)^(k/2)*gamma(nu/2))
       }
     }else{
@@ -501,7 +501,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   rep <- n.sim*n.thin + n.burnin
   ids <- matrix(seq(1,n.sim*n.thin*k,k))
   ids <- ids[seq(1,n.sim*n.thin,n.thin)]
-  ids <- n.burnin*k + as.vector(apply(matrix(ids),1,function(x) x + c(0:(k-1))))
+  ids <- (n.burnin+1)*k + as.vector(apply(matrix(ids),1,function(x) x + c(0:(k-1))))
   Sigmanew2 <- list()
   name <- list()
   tn1 <- function(mu,var){
@@ -533,9 +533,12 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   }
   if(regim > 1) ps <- max(ars$p,ars$q,ars$d,prior$hmax) else ps <- max(ars$p,ars$q,ars$d)
   if(regim > 1){
+    if(is.null(prior$alpha0)) prior$alpha0 <- 0
+    if(is.null(prior$alpha1)) prior$alpha1 <- 1
     Zs <- Z[(ps+1-prior$hmin):(nrow(D)-prior$hmin),]
-    t1 <- max(Zs);t0 <- min(Zs)
-    thresholds <- quantile(Zs,probs=c(1:(regim-1))/regim)
+    t1 <- quantile(Zs,probs=prior$alpha1);t0 <- quantile(Zs,probs=prior$alpha0)
+    probs <- prior$alpha0 + (prior$alpha1-prior$alpha0)*seq(1,regim-1,1)/regim
+    thresholds <- quantile(Zs,probs=probs)
     regs <- cut(Zs,breaks=c(-Inf,sort(thresholds),Inf),labels=FALSE)
     thresholds.chains <- matrix(thresholds,regim-1,1)
     hs.chains <- matrix(prior$hmin,1,1)
@@ -544,18 +547,33 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
     y <- matrix(D[(ps+1):nrow(D),1:k],ncol=k)
     X <- matrix(1,nrow(y),1)
     for(j in 1:ars$p[i]) X <- cbind(X,D[((ps+1)-j):(nrow(D)-j),])
-    name[[i]] <-  c("(Intercept)",paste0(rep(colnames(D)[1:k],ars$p[i]),sort(paste0(".lag(",rep(1:ars$p[i],k))),")"))
+    name0 <- rep(1:ars$p[i],k)
+    if(any(nchar(name0)>1)){
+      name1 <- nchar(name0); name1 <- max(name1) - name1
+      name0 <- unlist(lapply(1:length(name1),function(x) paste0(rep(" ",name1[x]),name0[x])))
+    }
+    name[[i]] <-  c("(Intercept)",paste0(rep(colnames(D)[1:k],ars$p[i]),sort(paste0(".lag(",name0)),")"))
     if(!Intercept){
       X <- matrix(X[,-1],nrow(X),ncol(X)-1)
       name[[i]] <- name[[i]][-1]
     }
     if(ars$q[i]!=0){
       for(j in 1:ars$q[i]) X <- cbind(X,X2[((ps+1)-j):(nrow(D)-j),])
-      name[[i]] <- c(name[[i]],paste0(rep(colnames(X2),ars$q[i]),sort(paste0(".lag(",rep(1:ars$q[i],r))),")"))
+      name0 <- rep(1:ars$q[i],r)
+      if(any(nchar(name0)>1)){
+        name1 <- nchar(name0); name1 <- max(name1) - name1
+        name0 <- unlist(lapply(1:length(name1),function(x) paste0(rep(" ",name1[x]),name0[x])))
+      }
+      name[[i]] <- c(name[[i]],paste0(rep(colnames(X2),ars$q[i]),sort(paste0(".lag(",name0)),")"))
     }
     if(ars$d[i]!=0){
       for(j in 1:ars$d[i]) X <- cbind(X,Z[((ps+1)-j):(nrow(D)-j),])
-      name[[i]] <- c(name[[i]],paste0(rep(colnames(Z),ars$d[i]),sort(paste0(".lag(",1:ars$d[i])),")"))
+      name0 <- 1:ars$d[i]
+      if(any(nchar(name0)>1)){
+        name1 <- nchar(name0); name1 <- max(name1) - name1
+        name0 <- unlist(lapply(1:length(name1),function(x) paste0(rep(" ",name1[x]),name0[x])))
+      }
+      name[[i]] <- c(name[[i]],paste0(rep(colnames(Z),ars$d[i]),sort(paste0(".lag(",name0)),")"))
     }
     colnames(X) <- name[[i]]
     if(!missingArg(row.names)){
@@ -622,12 +640,13 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       usi <- us[places]
       Xu <- matrix(sqrt(usi),nrow(X),ncol(X))*X
       yu <- matrix(sqrt(usi),nrow(X),k)*y
-      resu <- yu-Xu%*%chains[[i]]$location[,(ncol(chains[[i]]$location)-k+1):ncol(chains[[i]]$location)]
+      resu <- yu-Xu%*%chains[[i]]$location[,(ncols-k+1):ncols]
       ds <- colSums(t(resu)*tcrossprod(Sigmanew2[[i]],resu))
       result <- result -0.5*sum(ds - log(det(Sigmanew2[[i]])) - k*log(usi) + k*log(2*pi))
     }
     return(result)
   }
+  varis <- n.burnin + seq(1,n.thin*n.sim,n.thin)
   bar <- txtProgressBar(min=0, max=rep, initial=0, width=min(50,rep), char="+", style=3)
   for(j in 1:rep){
     if(dist %in% c("Skew-normal","Skew-Student-t")){
@@ -647,9 +666,10 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       y <- matrix(y2z - matrix(chains$delta[,j],n,k,byrow=TRUE)*zs[places,],n,k)
       mu0s <- matrix(prior$theta0,s,k)
       Sigmarinv <- diag(s)/prior$delta0
+      ncols <- ncol(chains[[i]]$location)
       if(dist %in% c("Gaussian","Skew-normal")) us[places] <- rep(1,n)
       else{
-        resu <- y-X%*%chains[[i]]$location[,(1+(j-1)*k):(j*k)]
+        resu <- y-X%*%chains[[i]]$location[,(ncols-k+1):ncols]
         usi <- colSums(t(resu)*tcrossprod(Sigmanew2[[i]],resu))
       }
       if(dist=="Laplace")
@@ -673,7 +693,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       usi <- us[places]
       zsi <- matrix(0,n,k)
       if(dist %in% c("Skew-normal","Skew-Student-t")){
-        ais <- matrix(chains$delta[,j],k,n)*tcrossprod(Sigmanew2[[i]],y2z-X%*%chains[[i]]$location[,(1+(j-1)*k):(j*k)])
+        ais <- matrix(chains$delta[,j],k,n)*tcrossprod(Sigmanew2[[i]],y2z-X%*%chains[[i]]$location[,(ncols-k+1):ncols])
         Ais <- diag(k) + matrix(chains$delta[,j],k,k)*Sigmanew2[[i]]*matrix(chains$delta[,j],k,k,byrow=TRUE)
         Ais2 <- chol2inv(chol(Ais))
         if(k>1) Ais3 <- chol(Ais2)
@@ -687,13 +707,13 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       yu <- matrix(sqrt(usi),n,k)*y
       A <- chol2inv(chol(Sigmarinv + crossprod(Xu)))
       M <- crossprod(A,(crossprod(Xu,yu) + crossprod(Sigmarinv,mu0s)))
-      betanew <- M + crossprod(chol(A),matrix(rnorm(s*k),s,k))%*%chol(chains[[i]]$scale[,(1+(j-1)*k):(j*k)])
+      betanew <- M + crossprod(chol(A),matrix(rnorm(s*k),s,k))%*%chol(chains[[i]]$scale[,(ncols-k+1):ncols])
       chains[[i]]$location <- cbind(chains[[i]]$location,betanew)
       Omega <- Omega0 + crossprod(betanew-mu0s,Sigmarinv)%*%(betanew-mu0s) + crossprod(yu-Xu%*%betanew)
       Omegachol <- chol(chol2inv(chol(Omega)))
       Sigmanew2[[i]] <- tcrossprod(crossprod(Omegachol,matrix(rnorm(k*(prior$tau0+s+n)),k,prior$tau0+s+n)))
-      if(j < n.burnin) Sigmanew <- chol2inv(chol(Sigmanew2[[i]])) else Sigmanew <- Sigmanew2[[i]]
-      chains[[i]]$scale <- cbind(chains[[i]]$scale,Sigmanew)
+      if(j %in% varis) Sigmanew <- chol2inv(chol(Sigmanew2[[i]])) else Sigmanew <- Sigmanew2[[i]]
+      chains[[i]]$scale <- cbind(chains[[i]]$scale,chol2inv(chol(Sigmanew2[[i]])))
       if(dist=="Contaminated normal"){
         resu <- y-X%*%betanew
         ss[places] <- colSums(t(resu)*tcrossprod(Sigmanew2[[i]],resu))
@@ -732,10 +752,11 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       Bis2 <- chol2inv(chol(Bis + diag(k)/prior$phi0))
       chains$delta <- cbind(chains$delta,Bis2%*%bis + crossprod(chol(Bis2),matrix(rnorm(k),k,1)))
     }else chains$delta <- cbind(chains$delta,matrix(0,k,1))
+    ncols <- ncol(chains[[1]]$location)
     if(regim > 1){
       a0 <- (thresholds.chains[,j] - t0)/(t1 - t0)
       if(length(a0) > 1) a0 <- c(a0[1],diff(a0))
-      tp <- 100000
+      tp <- 3000
       a0 <- tp*c(a0,1-sum(a0))
       ind <- TRUE
       while(ind){
@@ -748,7 +769,7 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
         }
       }
       a <- min(1,exp(Loglik(hs,thresholds.new) - Loglik(hs,thresholds.chains[,j]) +
-              sum((tp*r0-1)*log(a0/tp) - lgamma(tp*r0)) + lgamma(sum(tp*r0)) - sum((a0-1)*log(r0) - lgamma(a0)) - lgamma(sum(a0))))
+                       sum((tp*r0-1)*log(a0/tp) - lgamma(tp*r0)) + lgamma(sum(tp*r0)) - sum((a0-1)*log(r0) - lgamma(a0)) - lgamma(sum(a0))))
       if(runif(1) > a){
         thresholds.new <- thresholds.chains[,j]
         ta <- c(ta,0)
@@ -756,10 +777,12 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
       else ta <- c(ta,1)
       thresholds.chains <- cbind(thresholds.chains,thresholds.new)
       resul <- vector()
-      for(h in prior$hmin:prior$hmax) resul <- c(resul,Loglik(h,thresholds.new))
-      resul <- resul-max(resul)
-      resul <- exp(resul)/sum(exp(resul))
-      hs.chains <- cbind(hs.chains,sample(prior$hmin:prior$hmax,size=1,prob=resul))
+      if(prior$hmin!=prior$hmax){
+        for(h in prior$hmin:prior$hmax) resul <- c(resul,Loglik(h,thresholds.new))
+        resul <- resul-max(resul)
+        resul <- exp(resul)/sum(exp(resul))
+        hs.chains <- cbind(hs.chains,sample(prior$hmin:prior$hmax,size=1,prob=resul))
+      }else hs.chains <- cbind(hs.chains,prior$hmin)
     }
     setTxtProgressBar(bar,j)
   }
@@ -775,12 +798,13 @@ mtar <- function(formula, data, subset, Intercept=TRUE, ars, row.names, dist="Ga
   if(dist %in% c("Skew-normal","Skew-Student-t"))
     chains$delta <- matrix(chains$delta[,n.burnin + seq(1,n.sim*n.thin,n.thin)],nrow=k,ncol=n.sim)
   out_ <- list(data=data,chains=chains,n.sim=n.sim,regim=regim,name=name,dist=dist,ps=ps,ars=ars,formula=Formula(formula),Intercept=Intercept,call=match.call(),log=log,response.series=D)
+  if(max(ars$q)>0) out_$r <- r
   if(regim > 1){
     out_$chains$thresholds <- matrix(thresholds.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)],ncol=n.sim)
     out_$chains$h <- hs.chains[,n.burnin + seq(1,n.sim*n.thin,n.thin)]
     out_$threshold.series=Z
-    out_$ts=paste0(colnames(Z),".lag(",mean(out_$chains$h),")")
-    out_$ta=100*mean(ta[n.burnin+seq(1,n.sim*n.thin)])
+    out_$ts=paste0(colnames(Z),".lag(",round(mean(out_$chains$h),digits=1),")")
+    out_$ta=100*mean(ta[n.burnin + 1 + seq(1,n.sim*n.thin)])
   }
   if(max(ars$q) > 0) out_$covariable.series=X2
   class(out_) <- "mtar"
@@ -855,7 +879,7 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
     rownames(d) <- paste("Regime",1:nrow(d))
     colnames(d) <- rep(" ",3)
   }
-  cat("\nResponse          :",ifelse(length(colnames(object$data[[1]]$y))==1,colnames(object$data[[1]]$y),paste(colnames(object$data[[1]]$y),collapse="    |    ")))
+  cat("\nOutput series     :",ifelse(length(colnames(object$data[[1]]$y))==1,colnames(object$data[[1]]$y),paste(colnames(object$data[[1]]$y),collapse="    |    ")))
   if(object$regim > 1) cat("\nThreshold series  :",object$ts,"(Mean)")
   cat("\nError distribution:",object$dist)
   cat("\n\n")
@@ -887,7 +911,7 @@ summary.mtar <- function(object, credible=0.95, digits=max(3, getOption("digits"
     outs <- matrix(outs,k,length(outs)/k)
     rownames(outs) <- colnames(object$data[[1]]$y)
     colnames(outs) <- c(rownames(outs),"",rownames(outs),"",rownames(outs))
-    cat("\n\nRegime",i,":")
+    cat("\n\nRegime",i,":\n")
     cat("\nAutoregressive coefficients\n")
     print(format(out, justify = "right", format = "+/-", zero.print="   |   "), quote=FALSE)
     cat("\nScale parameter (Mean, HDI_low, HDI_high)\n")
@@ -1105,6 +1129,7 @@ forecasting <- function(object,data,out.of.sample=FALSE,credible=0.95,row.names,
       colnames(D) <- Dnames[-1]
     }
     ytrue <- D
+    if(object$log) ytrue <- log(ytrue)
   }
   if(regim > 1 & is.null(setar)){
     mz <- model.part(Formula(object$formula), data = mmf, rhs = 2, terms = TRUE)
@@ -1132,6 +1157,7 @@ forecasting <- function(object,data,out.of.sample=FALSE,credible=0.95,row.names,
   ysim <- rbind(matrix(y,n,k*object$n.sim),matrix(0,pasos,k*object$n.sim))
   if(out.of.sample){
     prek <- matrix(0,pasos,object$n.sim)
+    ytrue2 <- ytrue
     ytrue <- rbind(matrix(y,n,k),matrix(ytrue,nrow(ytrue),k))
   }
   for(i in 1:object$n.sim){
@@ -1179,7 +1205,12 @@ forecasting <- function(object,data,out.of.sample=FALSE,credible=0.95,row.names,
   rownames(out_) <- row.names
   rownames(ysim) <- row.names
   out__ <- list(ypred=ysim,summary=out_,y=y)
-  if(out.of.sample) out__$log.score <- -log(rowMeans(prek))
+  if(out.of.sample){
+    out__$log.score <- -log(rowMeans(prek))
+    if(object$log) ytrue2 <- exp(ytrue2)
+    out__$APE <- 100*apply(matrix(abs((out_[,seq(1,3*k,3)] - ytrue2)/ytrue2),nrow(ytrue2),k),1,mean)
+    out__$SE <- apply(matrix((out_[,seq(1,3*k,3)] - ytrue2)^2,nrow(ytrue2),k),1,mean)
+  }
   class(out__) <- "forecastmtar"
   return(out__)
 }
@@ -1338,6 +1369,7 @@ convert <- function(object){
 #' n <- 2000
 #' k <- 3
 #' ars <- list(p=c(1,2))
+#' l <- length(ars$p) - 1
 #' Z <- as.matrix(arima.sim(n=n+max(ars$p),list(ar=c(0.5))))
 #' Intercept <- TRUE
 #' parms <- list()
@@ -1348,13 +1380,13 @@ convert <- function(object){
 #'    parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
 #'    parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
 #' }
-#' thresholds <- quantile(Z,probs=(0.85 + runif(1)*0.3)*seq(1,length(ars$p)-1)/length(ars$p))
+#' thresholds <- quantile(Z,probs=(0.85 + runif(l)*0.3)*c(1:l)/(l+1))
 #' out1 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
 #'                thresholds=thresholds,t.series=Z,dist="Student-t",extra=6)
 #' str(out1)
 #'
 #' fit1 <- mtar(~ Y1 + Y2 + Y3 | t.series, data=out1, ars=ars, dist="Student-t",
-#'              nsim=3000, n.burn=2000, n.thin=2)
+#'              n.sim=3000, n.burn=2000, n.thin=2)
 #' summary(fit1)
 #'
 #' ###### Simulation of a trivariate VAR model
@@ -1374,7 +1406,7 @@ convert <- function(object){
 #'                dist="Slash",extra=2)
 #' str(out2)
 #'
-#' fit2 <- mtar(~ Y1 + Y2 + Y3, data=out2, ars=ars, dist="Slash", nsim=3000,
+#' fit2 <- mtar(~ Y1 + Y2 + Y3, data=out2, ars=ars, dist="Slash", n.sim=3000,
 #'              n.burn=2000, n.thin=2)
 #' summary(fit2)
 #' toy <- data.frame(Date=rep(0,10))
@@ -1400,7 +1432,7 @@ convert <- function(object){
 #' str(out3)
 #'
 #' fit3 <- mtar(~ Y1 + Y2 + Y3 | Y2, data=out3, ars=ars, dist="Laplace",
-#'              nsim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
+#'              n.sim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
 #' summary(fit3)
 #' toy <- data.frame(Date=rep(0,10))
 #' f3 <- forecasting(fit3, setar=2, data=toy, row.names=Date)
