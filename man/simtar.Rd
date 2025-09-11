@@ -15,7 +15,7 @@ simtar(
   t.series,
   ex.series,
   dist = "Gaussian",
-  delta = NULL,
+  skewness = NULL,
   extra,
   setar = NULL
 )
@@ -48,7 +48,7 @@ Slash ("Slash"), Symmetric Hyperbolic ("Hyperbolic"), Laplace ("Laplace"), and
 contaminated normal ("Contaminated normal"). By default,\code{dist} is set to
 "Gaussian".}
 
-\item{delta}{an (optional) vector with the values of the skewness parameters. By default,\code{delta} is set to \code{NULL}.}
+\item{skewness}{an (optional) vector with the values of the skewness parameters. By default,\code{delta} is set to \code{NULL}.}
 
 \item{extra}{a value indicating the value of the extra parameter of the noise process distribution, if any.}
 
@@ -78,7 +78,7 @@ for(j in 1:length(ars$p)){
    parms[[j]]$location <- matrix(parms[[j]]$location,np,k)
    parms[[j]]$scale <- rgamma(k,shape=1,scale=1)*diag(k)
 }
-thresholds <- quantile(Z,probs=(0.85 + runif(l)*0.3)*c(1:l)/(l+1))
+thresholds <- quantile(Z,probs=(0.7 + runif(l)*0.6)*c(1:l)/(l+1))
 out1 <- simtar(n=n,k=k,ars=ars,Intercept=Intercept,parms=parms,
                thresholds=thresholds,t.series=Z,dist="Student-t",extra=6)
 str(out1)
@@ -128,11 +128,11 @@ out3 <- simtar(n=n, k=k, ars=ars, Intercept=Intercept, parms=parms, delay=2,
                thresholds=-1, dist="Laplace", setar=2)
 str(out3)
 
-fit3 <- mtar(~ Y1 + Y2 + Y3 | Y2, data=out3, ars=ars, dist="Laplace",
-             n.sim=3000,n.burn=2000, n.thin=2, prior=list(hmin=1))
+fit3 <- mtar(~ Y1 + Y2 + Y3, data=out3, ars=ars, dist="Laplace",
+             n.sim=3000,n.burn=2000, n.thin=2, setar=2)
 summary(fit3)
 toy <- data.frame(Date=rep(0,10))
-f3 <- forecasting(fit3, setar=2, data=toy, row.names=Date)
+f3 <- forecasting(fit3, data=toy, row.names=Date)
 f3$summary
 plot(f3, n=100)
 }

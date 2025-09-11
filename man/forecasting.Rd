@@ -4,14 +4,7 @@
 \alias{forecasting}
 \title{Forecasting of a multivariate TAR model.}
 \usage{
-forecasting(
-  object,
-  data,
-  out.of.sample = FALSE,
-  credible = 0.95,
-  row.names,
-  setar = NULL
-)
+forecasting(object, data, out.of.sample = FALSE, credible = 0.95, row.names)
 }
 \arguments{
 \item{object}{an object of the class \emph{mtar}.}
@@ -28,9 +21,6 @@ typically the environment from which \code{mtar} is called.}
 
 \item{row.names}{an vector that allows the user to name the time point to
 which each row in the data set \code{data} corresponds.}
-
-\item{setar}{an (optional) positive integer indicating the component of the output series which is
-the threshold variable. By default,\code{setar} is set to \code{NULL}, which indicates that the fitted model is not a SETAR.}
 }
 \value{
 a list with the following component

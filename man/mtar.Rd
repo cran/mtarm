@@ -16,6 +16,8 @@ mtar(
   n.sim = 500,
   n.burnin = 100,
   n.thin = 1,
+  ssvs = FALSE,
+  setar = NULL,
   log = FALSE,
   ...
 )
@@ -66,6 +68,14 @@ iterations for the simulation. By default, \code{n.burnin} is set to 100.}
 
 \item{n.thin}{an (optional) positive integer specifying the required thinning interval
 for the simulation. By default, \code{n.thin} is set to 1.}
+
+\item{ssvs}{an (optional) logical variable. If \code{ssvs=TRUE} then the Stochastic Search
+Variable Selection (SSVS) procedure is applied to identify relevant lags of the
+output, exogenous and threhold series. By default, \code{ssvs} is set to \code{FALSE}.}
+
+\item{setar}{an (optional) positive integer indicating the component of the output series which is
+the threshold variable. By default,\code{setar} is set to \code{NULL}, which
+indicates that the fitted model is not SETAR.}
 
 \item{log}{an (optional) logical variable. If \code{TRUE}, then the behaviour of the output
 series is described using the exponentiated version of \code{dist}.}
